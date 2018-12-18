@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <ol >
+            <li v-for="(item, index) in toDos" :key="index" v-model="toDos[index]"> 
+                <!-- :key="index" v-model="toDos[index]" @change="print" -->
+                {{item.title}} {{dateToString(item.fromDate)}} 
+                <button v-on:click="toTop(index)">置顶</button>
+                <button v-on:click="delay(index)">延后一天</button>
+                <button v-on:click="del(index)">删除</button>
+            </li>
+        </ol>
+    </div>
+    
+    <script>
+            var toDos = 
+                    [
+                        {
+                            title: "learn Vue",
+                            fromDate: new Date("2018-12-18"),
+                            sortValue: 0
+                        },
+                        {
+                            title: "learn WebForm",
+                            fromDate: new Date("2018-12-18"),
+                            sortValue: 0
+                        },
+                        {
+                            title: "learn HRO",
+                            fromDate: new Date("2018-11-22"),
+                            sortValue: 0
+                        }
+                    ];
+            // Object.freeze(toDos);
+            var vm = 
+            new Vue({
+                        el: "#app",
+                        data: {
+                            toDos : toDos,
+                            maxSortValue: 0
+                        },
+                        methods:{
+                            dateToString : function(date){
+                                return date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate() + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+                            },
+                            sortValue : function(a, b){
+                                return b.sortValue - a.sortValue;
+                            },
+                            print(){
+                                console.log(this.toDos);
+                            },
+                            toTop: function(index){
+                                    console.log(index);
+                                    var toDo = this.toDos[index];
+                                    this.toDos.splice(0, 0, toDo);
+                                    this.toDos.splice(index+1, 1);
+                                    vm.$set(this.toDos, 0, this.toDos[0]);
+
+                                    // this.toDos[index].sortValue = this.maxSortValue+1;
+                                    // this.maxSortValue = this.maxSortValue + 1;
+                                    // this.toDos.sort(this.sortValue);
+                            },
+                            delay: function(index){
+                                console.log(toDo);
+                                var toDo = this.toDos[index];
+                                toDo.fromDate.setDate(toDo.fromDate.getDate() + 1);
+                                // this.toDos[index].fromDate.setDate(this.toDos[index].fromDate.getDate() + 1);
+                                this.toDos.splice(index, 1, toDo);
+
+                                // vm.$set(this.toDos, index, toDo);
+                            },
+                            del: function(index){
+                                console.log(index);
+                                this.toDos.splice(index, 1);
+                            }
+                        }
+                    });
+        </script>
+</body>
+</html>
