@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速排序 - 可视化代码运行</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+    <style>
+        .num {
+            border: blue 1px solid;
+            display: inline-block;
+            width: 50px;
+        }
+
+        .low {
+            background-color: red;
+        }
+
+        .high {
+            background-color: green;
+        }
+
+        .ordered {
+            background-color: gray;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 20px;">
+                <select v-model="countNums">
+                    <option v-for="num in [2,3,4,5,6,7,8,9]" :selected="num == countNums">{{num}}</option>
+                </select>
+                <button @click="getNums">随机生成正数组（长度为{{countNums}}）</button>
+            </div>
+            <div>
+                <select v-model="delayOption">
+                    <option v-for="num in [1,2,3]" :selected="num == delayOption">{{num}}</option>
+                </select>
+                <button @click="sort" :disabled="intv != 0">重新开始快速排序（每步耗时{{delayOption}}秒）</button>
+            </div>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <div class='low' style="width:50px;display: inline-block;">low</div>
+            <div class='high' style="width:50px;display: inline-block;">high</div>
+        </div>
+        <div style="margin-bottom: 10px;">枢轴：{{pivot}}</div>
+        <div class="num" v-for="(value, index) in nums"
+            v-bind:class="{'low': index == low, 'high': index == high, 'ordered': ordered.indexOf(index) > -1  }"
+            :style="'height:' + (value == 0 ? 5 : value * 10) +'px;'">
+            {{value}}
+        </div>
+    </div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            nums: [],//排序前后会改变
+            oldNums: [],//排序前
+            countNums: 4, //样例数组长度
+            delayOption: 1, //每步耗时秒数
+            //排序辅助
+            low: 0,
+            high: 0,
+            pivot: -1,
+            ordered: [],
+            codeSteps: [], //每步的操作
+            intv: 0 // 定时器,返回值从1开始
+        },
+        created() {
+            for (var i = 0; i < this.countNums; i++) {
+                this.nums.push(Math.ceil(Math.random() * 50));
+            }
+            this.oldNums = [...this.nums]; //深拷贝
+            this.high = this.nums.length-1;
+            this.pivot = this.nums.length > 1 ? this.nums[0] : -1;
+            this.low = 0;
+        },
+        computed: {
+            delay() {
+                return this.delayOption * 1000;
+            }
+        },
+        methods: {
+            init() {
+                //初始化
+                this.nums = [];
+                this.low = 0;
+                this.codeSteps = [];
+                clearInterval(this.intv);
+                this.intv = 0;
+                this.ordered = [];
+            },
+            getNums() {
+                this.init();
+                for (let i = 0; i < this.countNums; i++) {
+                    this.nums.push(Math.ceil(Math.random() * 50));
+                }
+                this.high = this.nums.length-1;
+                this.pivot = this.nums.length > 1 ? this.nums[0] : -1;
+                this.low = 0;
+                this.oldNums = [...this.nums]; //深拷贝
+            },
+            sort() {
+                this.init();
+                // console.log(app.oldNums);
+                this.nums = [...this.oldNums];
+
+                //1. 使用队列暂存运行步骤
+                this.QuickSort(0, this.nums.length-1);
+                // this.nums.push(-1);
+                // this.nums.pop();
+                this.nums = [...this.oldNums];
+                this.high = this.nums.length-1;
+                this.pivot = this.high > 0 ? this.nums[0] : -1;
+                console.log(this.codeSteps);
+                // 2. 按队列执行比较和交换，方便可视化
+                this.funcIntv();
+                this.intv = setInterval(function () {
+                    app.funcIntv();
+                }, app.delay * 2); // funcIntv里面有2个基本步骤：聚焦和交换，不交换跟交换耗时一样
+            },
+            modify(type, a, b){
+                if(type == 0){
+                    app.nums[a] = app.nums[b];
+                }else if(type == 1 || type == 2 || type == 3){
+                    app.nums[a] = b;
+                }
+                if(type == 3){
+                    app.ordered.push(a);
+                }
+                if(type == 4){
+                    app.pivot = b;
+                }
+                app.nums.push(-1);
+                app.nums.pop();
+            },
+            funcIntv(){
+                if (app.codeSteps.length > 0) {
+                    // 1. 着眼处理对象
+                    const type = app.codeSteps.shift();
+                    const a = app.codeSteps.shift();
+                    const b = app.codeSteps.shift();
+                    if(type == 0){
+                        if(a < b){
+                            app.low = a;
+                            app.high = b;
+                        }else{
+                            app.low = b;
+                            app.high = a;
+                        }
+                    }else if(type == 1){
+                        app.high = a;
+                    }else if(type == 5){
+                        app.high = b;
+                    }else if(type == 2 || type == 3 || type == 6){
+                        app.low = a;
+                    }
+                    // console.log(app.low, app.high);
+                    //2. 进行处理（提供反应时间）
+                    setTimeout(function () {
+                        app.modify(type, a, b);
+                    }, app.delay);
+                }else{
+                    //可视化的样式收尾
+                    clearInterval(app.intv);
+                    app.intv = 0;
+                    
+                    //检查
+                    let i = 0;
+                    let nums = [...app.oldNums];
+                    nums.sort(app.sortNumber);
+                    while(i < app.nums.length && app.nums[i] == nums[i++]);
+                    if(i != app.nums.length){
+                        alert('排序前后不一致! ' + nums + ' -> ' + app.nums);
+                        console.log(nums);
+                        console.log(app.nums);
+                    }
+                }
+            },
+            //将nums[low...high]划分为两个子表，pivotpos左边小于它，右边大于它
+            QuickSort(low, high){
+                if(low < high){ //low == high时子表只有一个元素，已有序
+                    const pivotpos = this.Partition(low, high);
+                    this.QuickSort(low, pivotpos-1);
+                    this.QuickSort(pivotpos+1, high);
+                }
+            },
+            //一趟划分
+            Partition(low, high){
+                this.codeSteps.push(5, low, high); //5：突出high
+                this.codeSteps.push(6, low, high);//记录步骤 6：突出low
+                const pivot = this.nums[low];
+                this.codeSteps.push(4, low, pivot); //记录步骤 4：选定枢轴
+                while(low < high){
+                    while(low < high && this.nums[high] >= pivot){
+                        high--;
+                        this.codeSteps.push(5, low, high); //5：突出high
+                    }
+                    this.nums[low] = this.nums[high];
+                    this.codeSteps.push(0, low, high); //记录步骤 0：替换
+                    this.nums[high] = 0;
+                    this.codeSteps.push(1, high, 0); //记录步骤 1：空出高位
+                    while(low < high && this.nums[low] <= pivot){
+                        low++;
+                        this.codeSteps.push(6, low, high); // 6：突出low
+                    }
+                    this.nums[high] = this.nums[low];
+                    this.codeSteps.push(0, high, low); //记录步骤 0：替换
+                    this.nums[low] = 0;
+                    this.codeSteps.push(2, low, 0); //记录步骤 1：空出低位
+                }
+                
+                this.nums[low] = pivot;
+                this.codeSteps.push(3, low, pivot); //记录步骤 3：确定枢轴位置
+                return low;
+            },
+            sortNumber(a,b)
+            {
+                return a - b;
+            }
+        }
+    })
+</script>
+
+</html>
