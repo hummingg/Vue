@@ -15,11 +15,15 @@
             background-color: red;
         }
 
-        .ordered {
-            border: 1px solid black!important;
+        .pre {
+            background-color: green;
         }
 
-        .guard{
+        .ordered {
+            border: 1px solid black !important;
+        }
+
+        .guard {
             background-color: lightblue;
             margin-bottom: 10px;
         }
@@ -36,7 +40,7 @@
                 <button @click="getNums">随机生成正数组（长度为{{countNums}}）</button>
             </div>
             <div>
-                <select v-model="delayOption">
+                <select v-model="delayOption" :disabled="intv != 0">
                     <option v-for="num in [1,2,3]" :selected="num == delayOption">{{num}}</option>
                 </select>
                 <button @click="sort" :disabled="intv != 0">重新开始直接插入排序（每步耗时{{delayOption}}秒）</button>
@@ -44,7 +48,7 @@
         </div>
         <div>哨兵：</div>
         <div class="num" v-for="(value, index) in nums"
-            v-bind:class="{'guard': index == 0, 'active': index == curIndex, 'ordered': index > 0 && index < round }"
+            v-bind:class="{'guard': index == 0, 'active': index == curIndex, 'pre': index == preIndex, 'ordered': index > 0 && index < round }"
             :style="'width:' + (value == 0 ? 5 : value * 10) +'px;'">
             {{value}}
         </div>
@@ -61,6 +65,7 @@
 
             round: 2, //当前趟数,从1开始计数，第1趟只有一个元素显然有序
             curIndex: 2, //当前处理元素的索引
+            preIndex: 1,
             codeSteps: [], //每步的操作，记录运行步骤
             intv: 0 // 定时器,返回值从1开始
         },
@@ -71,12 +76,21 @@
             delay() {
                 return this.delayOption * 1000;
             }
+            // ,
+            // preIndex(){
+            //     if(this.isSwaped){
+            //         this.curIndex = this.curIndex - 1;
+            //         return this.curIndex + 1;
+            //     }
+            //     return this.curIndex - 1;
+            // }
         },
         methods: {
             init() {
                 //初始化
                 this.nums = [];
                 this.curIndex = 2;
+                this.preIndex = 1;
                 this.round = 2;
                 this.codeSteps = [];
                 clearInterval(this.intv);
@@ -86,7 +100,7 @@
                 this.init();
                 this.genNums();
             },
-            genNums(){
+            genNums() {
                 this.nums.push(0); // 哨兵
                 for (let i = 0; i < this.countNums; i++) {
                     this.nums.push(Math.ceil(Math.random() * 50));
@@ -105,40 +119,55 @@
                 this.funcIntv();
                 this.intv = setInterval(function () {
                     app.funcIntv();
-                }, app.delay * 2); // funcIntv里面有2个基本步骤：聚焦和处理
+                }, app.delay * 2); // funcIntv里面有2个基本步骤：着眼和处理
             },
-            InsertSort(){
+            InsertSort() {
                 let i, j;
-                for(i = 2;i < this.nums.length;i++){
-                    if(this.nums[i] < this.nums[i-1]){
+                for (i = 2; i < this.nums.length; i++) {
+                    this.codeSteps.push(0, i, i, i - 1); // 0：着眼
+                    if (this.nums[i] < this.nums[i - 1]) {
                         this.nums[0] = this.nums[i]; // 哨兵
-                        this.codeSteps.push(i, 0, i); // 记录运行步骤 0：用i替换0
-                        for(j = i-1; this.nums[0] < this.nums[j]; j--){ //1~i-1是部分有序，看i要插入到哪个位置
-                            this.nums[j+1] = this.nums[j];
-                            this.codeSteps.push(i, j+1, j);
+                        this.codeSteps.push(1, i, 0, i); // 1：替换
+                        this.codeSteps.push(0, i, i, i-1); // 0：着眼
+                        for (j = i - 1; this.nums[0] < this.nums[j]; j--) { //1~i-1是部分有序，看i要插入到哪个位置
+                            // this.codeSteps.push(0, i, j + 1, j); // 0：着眼
+                            this.nums[j + 1] = this.nums[j];
+                            this.nums[j] = this.nums[0];
+                            this.codeSteps.push(1, i, j + 1, j); // 1：替换
+                            this.codeSteps.push(0, i, j, j + 1); // 0：着眼
+                            this.codeSteps.push(0, i, j, j - 1); // 0：着眼
                         }
-                        this.nums[j+1] = this.nums[0];
-                        this.codeSteps.push(i, j+1, 0); // 记录运行步骤
-                    }else{
-                        this.codeSteps.push(i, i, -1); // 记录运行步骤 -1表示无需处理只需着眼
+                        // this.nums[j + 1] = this.nums[0];
+                        // this.codeSteps.push(1, i, j + 1, 0); // 1：替换
                     }
                 }
                 // this.nums.push(-1);
                 // this.nums.pop();
             },
-            funcIntv(){
+            funcIntv() {
                 if (app.codeSteps.length > 0) {
                     // 1. 着眼处理对象
+                    const type = app.codeSteps.shift();
                     const round = app.codeSteps.shift();
                     const a = app.codeSteps.shift();
                     const b = app.codeSteps.shift();
-                    app.curIndex = a;
+                    if (type == 0) {
+                        app.curIndex = a;
+                        app.preIndex = b;
+                    }
                     app.round = round;
                     //2. 进行处理（提供反应时间）
                     setTimeout(function () {
-                        if(b > -1){
+                        if (type == 1) { // 替换后着眼
                             app.nums[a] = app.nums[b];
                             app.nums[b] = app.nums[0];
+                            app.nums.push(-1);
+                            app.nums.pop();
+
+                            if (a != 0 && b != 0) { // 相邻互相替换
+                                app.curIndex = b;
+                                app.preIndex = a;
+                            }
                         }
                     }, app.delay);
                 } else {
@@ -147,20 +176,20 @@
                     app.intv = 0;
                     app.round = app.nums.length;
                     app.curIndex = -1;
+                    app.preIndex = -1;
                     //检查
                     let i = 1; // 哨兵不比较
                     let nums = [...app.oldNums];
                     nums.sort(app.sortNumber);
-                    while(i < app.nums.length && app.nums[i] == nums[i++]);
-                    if(i != app.nums.length){
+                    while (i < app.nums.length && app.nums[i] == nums[i++]);
+                    if (i != app.nums.length) {
                         alert('排序前后不一致! ' + nums + ' -> ' + app.nums);
                         console.log(nums);
                         console.log(app.nums);
                     }
                 }
             },
-            sortNumber(a,b)
-            {
+            sortNumber(a, b) {
                 return a - b;
             }
         }
