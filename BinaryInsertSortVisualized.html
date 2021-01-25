@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>折半插入排序 - 可视化代码运行</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+    <style>
+        .num {
+            border: blue 1px solid;
+        }
+
+        .guard {
+            background-color: lightblue;
+            margin-bottom: 10px;
+        }
+
+        .low {
+            background-color: red;
+        }
+
+        .mid{
+            background-color: blue;
+        }
+
+        .high {
+            background-color: green;
+        }
+
+        .target{
+            background-color: yellow;
+        }
+        
+        .cur{
+            border: red 1px dotted;
+        }
+
+        .ordered {
+            border: black 1px solid !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 20px;">
+                <select v-model="countNums">
+                    <option v-for="num in [2,3,4,5,6,7,8,9]" :selected="num == countNums">{{num}}</option>
+                </select>
+                <button @click="getNums">随机生成正数组（长度为{{countNums}}）</button>
+            </div>
+            <div>
+                <select v-model="delayOption" :disabled="intv != 0">
+                    <option v-for="num in [1,2,3]" :selected="num == delayOption">{{num}}</option>
+                </select>
+                <button @click="sort" :disabled="intv != 0">重新开始折半插入排序（每步耗时{{delayOption}}秒）</button>
+            </div>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <div class='low' style="width:50px;display: inline-block;">low</div>
+            <div class='mid' style="width:50px;display: inline-block;">mid</div>
+            <div class='high' style="width:50px;display: inline-block;">high</div>
+            <div class='target' style="width:50px;display: inline-block;">target</div>
+            <div style="display: inline-block;">(值相同时取后者颜色)</div>
+        </div>
+        <div>哨兵：</div>
+        <div class="num" v-for="(value, index) in nums"
+            v-bind:class="{'guard': index == 0, 'low': index == low, 'mid': index == mid, 'high': index == high, 
+            'ordered': index > 0 && index < round, 'target': index == target, 'cur': index == round }"
+            :style="'width:' + (value == 0 ? 5 : value * 10) +'px;'">
+            {{value}}
+        </div>
+    </div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            nums: [],//排序前后会改变,含哨兵
+            oldNums: [],//排序前
+            countNums: 4, //样例数组长度
+            delayOption: 2, //每步耗时秒数
+
+            round: 2, //当前趟数,从1开始计数，第1趟只有一个元素显然有序
+            low: 1,
+            high: 1,
+            target: -1,
+            codeSteps: [], //每步的操作，记录运行步骤
+            intv: 0 // 定时器,返回值从1开始
+        },
+        created() {
+            this.genNums();
+        },
+        computed: {
+            delay() {
+                return this.delayOption * 1000;
+            },
+            mid(){
+                if(this.target == -1){ //尚未找到位置时自动计算中间位置
+                    return parseInt((this.low + this.high) / 2);
+                }
+                return -1;
+            }
+        },
+        methods: {
+            init() {
+                //初始化
+                this.nums = [];
+                this.low = 1;
+                this.high = 1;
+                this.target = -1;
+                this.round = 2;
+                clearInterval(this.intv);
+                this.intv = 0;
+                this.codeSteps = [];
+            },
+            getNums() {
+                this.init();
+                this.genNums();
+            },
+            genNums() {
+                this.nums.push(0); // 哨兵
+                for (let i = 0; i < this.countNums; i++) {
+                    this.nums.push(Math.ceil(Math.random() * 50));
+                }
+                this.oldNums = [...this.nums]; //深拷贝
+            },
+            sort() {
+                this.nums = [...this.oldNums];
+                //1. 使用队列暂存运行步骤
+                this.BianryInsertSort();
+                console.log(this.codeSteps);
+                // 2. 按队列执行比较和交换，方便可视化
+                this.nums = [...this.oldNums]; //恢复数组重新可视化排序
+                // this.nums.push(-1);
+                // this.nums.pop();
+                this.funcIntv();
+                this.intv = setInterval(function () {
+                    app.funcIntv();
+                }, app.delay * 2); // funcIntv里面有2个基本步骤：着眼和处理
+            },
+            BianryInsertSort() {
+                let i, j, low, high, mid;
+                for (i = 2; i < this.nums.length; i++) {
+                    low = 1;
+                    high = i - 1;
+                    this.codeSteps.push(0, i, low, high);
+                    this.nums[0] = this.nums[i]; // 哨兵
+                    this.codeSteps.push(1, i, 0, i);
+                    while(low <= high){
+                        mid = parseInt((low + high) / 2);
+                        if(this.nums[mid] > this.nums[0]){
+                            high = mid - 1;
+                        }else{
+                            low = mid + 1;
+                        }
+                        this.codeSteps.push(0, i, low, high);
+                    }
+                    this.codeSteps.push(2, i, high+1, 0);
+                    for(j = i-1; j >= high+1; j--){
+                        this.nums[j+1] = this.nums[j];
+                        this.codeSteps.push(1, i, j+1, j);
+                    }
+                    this.nums[high+1] = this.nums[0];
+                    this.codeSteps.push(1, i, high+1, 0);
+                }
+                // this.nums.push(-1);
+                // this.nums.pop();
+            },
+            funcIntv() {
+                if (app.codeSteps.length > 0) {
+                    // 1. 着眼处理对象
+                    const type = app.codeSteps.shift();
+                    const round = app.codeSteps.shift();
+                    const a = app.codeSteps.shift();
+                    const b = app.codeSteps.shift();
+                    app.round = round;
+                    if (type == 0) {
+                        app.low = a;
+                        app.high = b;
+                        app.target = -1;
+                    }else if (type == 1) {
+                        app.low = (a == 0 || b == 0) ? app.low : b;
+                    }else if(type == 2){
+                        app.target = a;
+                    }
+                    //2. 进行处理（提供反应时间）
+                    setTimeout(function(){
+                        if(type == 1){
+                            app.low = (a == 0 || b == 0) ? app.low : a;
+                            app.nums[a] = app.nums[b];
+                            app.nums[b] = b == 0 ? app.nums[b] : 0;
+                            app.nums.push(-1);
+                            app.nums.pop();
+                        }
+                    }, app.delay);
+                } else {
+                    //可视化的样式收尾
+                    clearInterval(app.intv);
+                    app.intv = 0;
+                    app.round = app.nums.length;
+                    app.low = -1;
+                    app.high = -1;
+                    app.target = -1;
+                    //检查
+                    let i = 1; // 哨兵不比较
+                    let nums = [...app.oldNums];
+                    nums.sort(app.sortNumber);
+                    while (i < app.nums.length && app.nums[i] == nums[i++]);
+                    if (i != app.nums.length) {
+                        alert('排序前后不一致! ' + nums + ' -> ' + app.nums);
+                        console.log(nums);
+                        console.log(app.nums);
+                    }
+                }
+            },
+            sortNumber(a, b) {
+                return a - b;
+            }
+        }
+    })
+</script>
+
+</html>
