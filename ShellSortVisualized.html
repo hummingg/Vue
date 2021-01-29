@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>希尔排序 - 可视化代码运行</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+    <style>
+        .num {
+            border: blue 1px solid;
+        }
+
+        .active {
+            border: 3px solid red;
+        }
+
+        .pre {
+            border: 3px solid green;
+        }
+
+        .ordered {
+            border: 1px solid black !important;
+        }
+
+        .one{
+            background-color: cyan;
+        }
+        .two{
+            background-color: blue;
+        }
+        .three{
+            background-color: purple;
+        }
+        .four{
+            background-color: yellow;
+        }
+        .zero{
+            background-color: palevioletred;
+        }
+
+        .guard {
+            background-color: lightblue;
+            margin-bottom: 10px;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 20px;">
+                <select v-model="countNums">
+                    <option v-for="num in [2,3,4,5,6,7,8,9,10,11,12,13]" :selected="num == countNums">{{num}}</option>
+                </select>
+                <button @click="getNums">随机生成正数组（长度为{{countNums}}）</button>
+            </div>
+            <div>
+                <select v-model="delayOption" :disabled="intv != 0">
+                    <option v-for="num in [1,2,3]" :selected="num == delayOption">{{num}}</option>
+                </select>
+                <button @click="sort" :disabled="intv != 0">重新开始希尔排序（每步耗时{{delayOption}}秒）</button>
+            </div>
+        </div>
+        <div>增量：{{dk}}</div>
+        <div>哨兵：</div>
+        <div class="num" v-for="(value, index) in nums"
+            v-bind:class="{'zero': index % dk == 0, 'one': index % dk == 1, 'two': index % dk == 2, 'three': index % dk == 3, 'four': index % dk == 4, 'guard': index == 0,
+            'active': index == curIndex, 'pre': index == preIndex}"
+            :style="'width:' + (value == 0 ? 5 : value * 10) +'px;'">
+            {{value}}
+        </div>
+    </div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            nums: [],//排序前后会改变,含哨兵
+            oldNums: [],//排序前
+            countNums: 11, //样例数组长度
+            delayOption: 1, //每步耗时秒数
+
+            dk: 1,
+            curIndex: 2, //当前处理元素的索引
+            preIndex: 1,
+            codeSteps: [], //每步的操作，记录运行步骤
+            intv: 0 // 定时器,返回值从1开始
+        },
+        created() {
+            this.genNums();
+        },
+        computed: {
+            delay() {
+                return this.delayOption * 1000;
+            }
+        },
+        methods: {
+            init() {
+                //初始化
+                this.nums = [];
+                this.dk = 1;
+                this.curIndex = 2;
+                this.preIndex = 1;
+                this.codeSteps = [];
+                clearInterval(this.intv);
+                this.intv = 0;
+            },
+            getNums() {
+                this.init();
+                this.genNums();
+            },
+            genNums() {
+                this.nums.push(0); // 哨兵
+                for (let i = 0; i < this.countNums; i++) {
+                    this.nums.push(Math.ceil(Math.random() * 50));
+                }
+                this.oldNums = [...this.nums]; //深拷贝
+                this.dk = parseInt(this.countNums / 2);
+                this.preIndex = 1;
+                this.curIndex = this.preIndex + this.dk;
+            },
+            sort() {
+                this.nums = [...this.oldNums];
+                //1. 使用队列暂存运行步骤
+                this.ShellSort();
+                console.log(this.codeSteps);
+                // 2. 按队列执行比较和交换，方便可视化
+                this.nums = [...this.oldNums]; //恢复数组重新可视化排序
+                // this.nums.push(-1);
+                // this.nums.pop();
+                this.funcIntv();
+                this.intv = setInterval(function () {
+                    app.funcIntv();
+                }, app.delay); // 只需取出执行
+            },
+            ShellSort() {
+                const n = this.nums.length - 1;
+                for (let dk = parseInt(n/2); dk >= 1; dk = parseInt(dk/2)) {
+                    this.codeSteps.push('app.dk=' + dk + ';app.curIndex=' + (dk + 1) + ';app.preIndex=1');
+                    for(let i = dk+1;i <= n;i++){
+                        this.codeSteps.push('app.curIndex=' + i +';app.preIndex=' + (i-dk));
+                        if(this.nums[i] < this.nums[i-dk]){
+                            this.nums[0] = this.nums[i];
+                            this.codeSteps.push('app.nums[0]=app.nums[' + i + ']');
+                            let j = i-dk;
+                            for(;j>0;j-=dk){ // && this.nums[0]<this.nums[j]，取出来以看清步骤
+                                this.codeSteps.push('app.curIndex=' + (j+dk) +';app.preIndex=' + j);
+                                if(this.nums[0]<this.nums[j]){
+                                    this.codeSteps.push('app.curIndex=' + (j+dk) +';app.preIndex=' + j);
+                                    this.nums[j+dk] = this.nums[j];
+                                    this.nums[j] = this.nums[0];
+                                    this.codeSteps.push('app.nums['+ (j+dk) +']=app.nums[' + j + '];app.nums[' + j + ']=app.nums[0];'
+                                        + 'app.curIndex=' + j +';app.preIndex=' + (j+dk));
+                                }else{
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                // this.nums.push(-1);
+                // this.nums.pop();
+            },
+            funcIntv() {
+                if (app.codeSteps.length > 0) {
+                    // 1. 着眼处理对象
+                    const code = app.codeSteps.shift();
+                    //2. 进行处理（提供反应时间）
+                    setTimeout(function () {
+                        eval(code);
+                    }, app.delay);
+                } else {
+                    console.log('结束');
+                    //可视化的样式收尾
+                    app.curIndex = -1; //为啥不执行？
+                    app.preIndex = -1;
+                    clearInterval(app.intv);
+                    app.intv = 0;
+                    // app.$forceUpdate();
+                    //检查
+                    let i = 1; // 哨兵不比较
+                    let nums = [...app.oldNums];
+                    nums.sort(app.sortNumber);
+                    while (i < app.nums.length && app.nums[i] == nums[i++]);
+                    if (i != app.nums.length) {
+                        alert('排序前后不一致! ' + nums + ' -> ' + app.nums);
+                        console.log(nums);
+                        console.log(app.nums);
+                    }
+                }
+            },
+            sortNumber(a, b) {
+                return a - b;
+            }
+        }
+    })
+</script>
+
+</html>
