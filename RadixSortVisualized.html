@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基数排序 - 可视化代码运行</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+    <style>
+        .nums {
+            border: blue 1px solid;
+        }
+
+        .num {
+            border: blue 1px solid;
+            display: inline-block;
+            width: 50px;
+        }
+
+        .active {
+            background-color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" v-cloak>
+        <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 20px;">
+                <select v-model="countNums">
+                    <option v-for="num in [2,3,4,5,6,7,8,9,10,11,12,13,14,15]" :selected="num == countNums">{{num}}
+                    </option>
+                </select>
+                <button @click="getNums">随机生成正数组（长度为{{countNums}}）</button>
+            </div>
+            <div>
+                <select v-model="delayOption" :disabled="intv != 0">
+                    <option v-for="num in [1,2,3]" :selected="num == delayOption">{{num}}</option>
+                </select>
+                <button @click="sort" :disabled="intv != 0">重新开始基数排序（每步耗时{{delayOption}}秒）</button>
+            </div>
+        </div>
+        <div class="nums" v-for="(value, index) in nums" v-bind:class="{'active': index == curIndex}"
+            :style="'width:' + (value == 0  ? 1 : value) +'px;'">
+            {{value}}
+        </div>
+        <div style="margin-top: 20px;margin-bottom: 10px;">队头 -> 队尾，第{{round+1}}/3趟(看 {{(round == 0 ? '个': (round == 1 ? '十' : '百'))}} 位)</div>
+        <div>队列 0
+            <div class="num" v-for="(value, index) in nums0">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 1
+            <div class="num" v-for="(value, index) in nums1">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 2
+            <div class="num" v-for="(value, index) in nums2">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 3
+            <div class="num" v-for="(value, index) in nums3">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 4
+            <div class="num" v-for="(value, index) in nums4">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 5
+            <div class="num" v-for="(value, index) in nums5">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 6
+            <div class="num" v-for="(value, index) in nums6">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 7
+            <div class="num" v-for="(value, index) in nums7">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 8
+            <div class="num" v-for="(value, index) in nums8">
+                {{value}}
+            </div>
+        </div>
+        <div>队列 9
+            <div class="num" v-for="(value, index) in nums9">
+                {{value}}
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            nums: [],//排序前后会改变
+            oldNums: [],//排序前
+            nums0: [],
+            nums1: [],
+            nums2: [],
+            nums3: [],
+            nums4: [],
+            nums5: [],
+            nums6: [],
+            nums7: [],
+            nums8: [],
+            nums9: [],
+            countNums: 9, //样例数组长度
+            delayOption: 1, //每步耗时秒数
+
+            round: 0,
+            curIndex: 0,
+            codeSteps: [], //每步的操作，记录运行步骤
+            intv: 0 // 定时器,返回值从1开始
+        },
+        created() {
+            this.genNums();
+        },
+        computed: {
+            delay() {
+                return this.delayOption * 1000;
+            }
+        },
+        methods: {
+            init() {
+                //初始化
+                clearInterval(this.intv); //首先把定时器关了
+                this.intv = 0;
+                // setTimeout(function(){
+                    app.nums = [];//最好setTimeout,此处有bug
+                    app.EmptyQueue();
+                    app.curIndex = 0;
+                    app.codeSteps = [];
+                    app.$forceUpdate();
+                // }, app.delay * 2);
+            },
+            getNums() {
+                this.init();
+                this.genNums();
+            },
+            genNums() {
+                for (let i = 0; i < this.countNums; i++) {
+                    let random = Math.floor(Math.random() * 1000 + 1);
+                    while (random == 1000) {
+                        random = Math.floor(Math.random() * 1000 + 1);
+                    }
+                    this.nums.push(random);
+                }
+                this.oldNums = [...this.nums]; //深拷贝
+                this.curIndex = 0;
+            },
+            sort() {
+                this.nums = [...this.oldNums];
+                //1. 使用队列暂存运行步骤
+                this.RadixSort();
+                console.log(this.codeSteps);
+                // 2. 按队列执行比较和交换，方便可视化
+                this.nums = [...this.oldNums]; //恢复数组重新可视化排序
+                app.EmptyQueue();
+                // this.nums.push(-1);
+                // this.nums.pop();
+                this.funcIntv();
+                this.intv = setInterval(function () {
+                    app.funcIntv();
+                }, app.delay * 1.5); // 只需取出执行,但不能跟内部的1个单位一样，所以取1.5
+            },
+            RadixSort() {
+                let i = 0;
+                while (i < 3) {
+                    this.Allocate(i++);
+                    this.Collect();
+                }
+            },
+            Allocate(round) {
+                this.codeSteps.push('app.EmptyQueue();app.round='+round);//app.$forceUpdate();
+                this.EmptyQueue();
+                this.codeSteps.push('app.curIndex=0');
+                for (let i = 0; i < this.nums.length; i++) {
+                    let num = this.nums[i];
+                    let remainder;
+                    switch (round) {
+                        case 0:
+                            remainder = num % 10;
+                            break;
+                        case 1:
+                            remainder = parseInt(num / 10) % 10;
+                            break;
+                        case 2:
+                            remainder = parseInt(num / 100) % 10;
+                            break;
+                        default:
+                            break;
+                    }
+                    this.codeSteps.push('app[\'nums' + remainder + '\'].push(' + num + ')');
+                    console.log(round, num, remainder);
+                    console.log(this['nums' + remainder]);
+                    this['nums' + remainder].push(num);
+                    this.codeSteps.push('app.curIndex='+(i+1));
+                }
+            },
+            Collect() {
+                this.codeSteps.push('app.setZero();app.$forceUpdate();');
+                let k = 0;
+                for (let i = 0; i < 10; i++) {
+                    let nums = this['nums' + i];
+                    for (let j = 0; j < nums.length; j++) {
+                        this.codeSteps.push('app.nums['+k+']=' + nums[j] + ';app[\'nums' + i + '\'][' + j + ']=0;app.$forceUpdate();');
+                        this.nums[k++] = nums[j];
+                        nums[j] = 0;
+                    }
+                }
+            },
+            EmptyQueue() {
+                for (let i = 0; i < 10; i++) {
+                    app['nums' + i] = [];
+                }
+                app.$forceUpdate();
+            },
+            setZero(){
+                for(let i = 0; i < this.nums.length; i++){
+                    this.nums[i] = 0;
+                }
+            },
+            funcIntv() {
+                if (app.codeSteps.length > 0) {
+                    const code = app.codeSteps.shift();
+                    setTimeout(function () {
+                        eval(code);
+                    }, app.delay);
+                } else {
+                    console.log('结束');
+                    //可视化的样式收尾
+                    clearInterval(app.intv);
+                    app.intv = 0;
+                    //检查
+                    let i = 0;
+                    let nums = [...app.oldNums];
+                    nums.sort(app.sortNumber);
+                    while (i < app.nums.length && app.nums[i] == nums[i++]);
+                    if (i != app.nums.length) {
+                        alert('排序前后不一致! ' + nums + ' -> ' + app.nums);
+                        console.log(nums);
+                        console.log(app.nums);
+                    }
+                }
+            },
+            sortNumber(a, b) {
+                return a - b;
+            }
+        }
+    })
+</script>
+
+</html>
