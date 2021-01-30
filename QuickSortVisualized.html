@@ -37,7 +37,7 @@
                 <button @click="getNums">随机生成正数组（长度为{{countNums}}）</button>
             </div>
             <div>
-                <select v-model="delayOption">
+                <select v-model="delayOption" :disabled="intv != 0">
                     <option v-for="num in [1,2,3]" :selected="num == delayOption">{{num}}</option>
                 </select>
                 <button @click="sort" :disabled="intv != 0">重新开始快速排序（每步耗时{{delayOption}}秒）</button>
