@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>归并排序 - 可视化代码运行</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+    <style>
+        .num {
+            border: blue 1px solid;
+        }
+
+        .low {
+            background-color: red;
+        }
+
+        .mid{
+            background-color: blue;
+        }
+
+        .high {
+            background-color: green;
+        }
+
+        .ordered {
+            border: 1px solid black !important;
+        }
+
+        .toorder {
+            border: 1px dotted black !important;
+        }
+        
+        .pointer{
+            border: 3px solid black;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 20px;">
+                <select v-model="countNums">
+                    <option v-for="num in [2,3,4,5,6,7,8,9]" :selected="num == countNums">{{num}}</option>
+                </select>
+                <button @click="getNums">随机生成正数组（长度为{{countNums}}）</button>
+            </div>
+            <div>
+                <select v-model="delayOption" :disabled="intv != 0">
+                    <option v-for="num in [1,2,3]" :selected="num == delayOption">{{num}}</option>
+                </select>
+                <button @click="sort" :disabled="intv != 0">重新开始归并排序（每步耗时{{delayOption}}秒）</button>
+            </div>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <div class='low' style="width:50px;display: inline-block;">low</div>
+            <div class='mid' style="width:50px;display: inline-block;">mid</div>
+            <div class='high' style="width:50px;display: inline-block;">high</div>
+            <div style="display: inline-block;">(值相同时取后者颜色)</div>
+        </div>
+        <div class="num" v-for="(value, index) in nums"
+            v-bind:class="{'low': index == low, 'mid': index == mid, 'high': index == high, 'toorder': index == toorder}"
+            :style="'width:' + (value == 0  ? 5 : value * 10) +'px;'">
+            {{value}}
+        </div>
+        <div style="margin-top: 20px;margin-bottom: 10px;">辅助数组('low->mid'子表有序，'mid+1->high'子表有序)</div>
+        <div class="num" v-for="(value, index) in numstmp"
+        v-bind:class="{'low': index == low, 'mid': index == mid, 'high': index == high, 'pointer': index == pointer_i || index == pointer_j}"
+            :style="'width:' + (value == 0 || value == undefined ? 5 : value * 10) +'px;'">
+            {{value == undefined ? 0 : value}}
+        </div>
+    </div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            nums: [],//排序前后会改变
+            numstmp: [],//辅助数组
+            oldNums: [],//排序前
+            oldNumstmp: [],//辅助数组
+            countNums: 5, //样例数组长度
+            delayOption: 1, //每步耗时秒数
+
+            low: -1, // low -> mid 有序
+            mid: -1, // mid+1 -> high 有序
+            high: -1,
+            toorder: -1,
+            pointer_i: -1,
+            pointer_j: -1,
+            codeSteps: [], //每步的操作，记录运行步骤
+            intv: 0 // 定时器,返回值从1开始
+        },
+        created() {
+            this.genNums();
+        },
+        computed: {
+            delay() {
+                return this.delayOption * 1000;
+            }
+        },
+        methods: {
+            init() {
+                //初始化
+                this.nums = [];
+                this.numstmp = [];
+                this.low = -1;
+                this.mid = -1;
+                this.high = -1;
+                this.toorder = -1;
+                this.pointer_i = -1;
+                this.pointer_j = -1;
+                this.codeSteps = [];
+                clearInterval(this.intv);
+                this.intv = 0;
+            },
+            getNums() {
+                this.init();
+                this.genNums();
+            },
+            genNums() {
+                for (let i = 0; i < this.countNums; i++) {
+                    this.nums.push(Math.ceil(Math.random() * 50));
+                    this.numstmp.push(0);
+                }
+                this.oldNums = [...this.nums]; //深拷贝
+                this.oldNumstmp = [...this.numstmp]; //深拷贝
+                this.low = 0;
+                this.high = this.countNums - 1;
+                this.mid = parseInt((this.low + this.high) / 2);
+            },
+            sort() {
+                this.nums = [...this.oldNums];
+                this.numstmp = [...this.oldNumstmp];
+                //1. 使用队列暂存运行步骤
+                this.MergeSort(0, this.nums.length - 1);
+                console.log(this.codeSteps);
+                // 2. 按队列执行比较和交换，方便可视化
+                this.nums = [...this.oldNums]; //恢复数组重新可视化排序
+                this.numstmp = [...this.oldNumstmp];
+                // this.nums.push(-1);
+                // this.nums.pop();
+                this.funcIntv();
+                this.intv = setInterval(function () {
+                    app.funcIntv();
+                }, app.delay * 1.5); // 只需取出执行,但不能跟内部的1个单位一样，所以取1.5
+            },
+            MergeSort(low, high) {
+                if(low < high){
+                    let mid = parseInt((low + high) / 2);
+                    this.codeSteps.push('app.low=' + low + ';app.high=' + high +';app.mid=' + mid);
+                    this.MergeSort(low, mid);
+                    this.MergeSort(mid+1, high);
+                    this.Merge(low, mid, high);
+                }
+                // this.nums.push(-1);
+                // this.nums.pop();
+            },
+            //合并两个有序子表，low -> mid 有序，mid+1 -> high 有序
+            Merge(low, mid, high){
+                this.codeSteps.push('app.low=' + low + ';app.high=' + high +';app.mid=' + mid);
+                for(let k = low; k <= high; k++){
+                    this.numstmp[k] = this.nums[k];
+                    this.codeSteps.push('app.numstmp['+k+'] = app.nums['+k+'];app.$forceUpdate();');
+                }
+                let i = low, j = mid+1, k = i;
+                this.codeSteps.push('app.toorder=' + k+';app.pointer_i='+i+';app.pointer_j='+j);
+                for(; i <= mid && j <= high; k++){
+                    if(this.numstmp[i] <= this.numstmp[j]){
+                        this.codeSteps.push('app.toorder=' + (k+1)+';app.pointer_i='+(i+1)+';app.nums['+k+'] = app.numstmp['+i+'];app.$forceUpdate();');
+                        this.nums[k] = this.numstmp[i++];
+                    }else{
+                        this.codeSteps.push('app.toorder=' + (k+1)+';app.pointer_j='+(j+1)+';app.nums['+k+'] = app.numstmp['+j+'];app.$forceUpdate();');
+                        this.nums[k] = this.numstmp[j++];
+                    }
+                }
+                while(i <= mid){
+                    this.codeSteps.push('app.toorder=' + (k+1)+';app.pointer_i='+(i+1)+';app.nums['+k+'] = app.numstmp['+i+'];app.$forceUpdate();');
+                    this.nums[k++] = this.numstmp[i++];
+                }
+                this.codeSteps.push(';app.pointer_i=-1');
+                while(j <= high){
+                    this.codeSteps.push('app.toorder=' + (k+1)+';app.pointer_j='+(j+1)+';app.nums['+k+'] = app.numstmp['+j+'];app.$forceUpdate();');
+                    this.nums[k++] = this.numstmp[j++];
+                }
+                this.codeSteps.push(';app.pointer_j=-1');
+            },
+            funcIntv() {
+                if (app.codeSteps.length > 0) {
+                    const code = app.codeSteps.shift();
+                    setTimeout(function () {
+                        eval(code);
+                    }, app.delay);
+                } else {
+                    console.log('结束');
+                    //可视化的样式收尾
+                    app.toorder = -1;
+                    app.pointer_i = -1;
+                    app.pointer_j = -1;
+                    clearInterval(app.intv);
+                    app.intv = 0;
+                    //检查
+                    let i = 0;
+                    let nums = [...app.oldNums];
+                    nums.sort(app.sortNumber);
+                    while (i < app.nums.length && app.nums[i] == nums[i++]);
+                    if (i != app.nums.length) {
+                        alert('排序前后不一致! ' + nums + ' -> ' + app.nums);
+                        console.log(nums);
+                        console.log(app.nums);
+                    }
+                }
+            },
+            sortNumber(a, b) {
+                return a - b;
+            }
+        }
+    })
+</script>
+
+</html>
