@@ -14,7 +14,7 @@ Learning Vue.js and computer science
 
 ### 选择排序
 - [简单选择排序](https://hummingg.github.io/Vue/SelectSortVisualized.html)
-- 堆排序（TODO，二叉树不好画-_-!）
+- [堆排序](https://hummingg.github.io/Vue/HeapSortVisualized.html)
 
 ### [归并排序](https://hummingg.github.io/Vue/MergeSortVisualized.html)
 ### [基数排序](https://hummingg.github.io/Vue/RadixSortVisualized.html)
