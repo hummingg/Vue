@@ -140,7 +140,7 @@
             genNums() {
                 this.nums.push(0); // 临时变量
                 for (let i = 0; i < this.countNums; i++) {
-                    this.nums.push(Math.ceil(Math.random() * 50));
+                    this.nums.push(Math.ceil(Math.random() * 40) + 10); // 10~50
                 }
                 this.oldNums = [...this.nums]; //深拷贝
                 this.round = this.countNums+1; 
