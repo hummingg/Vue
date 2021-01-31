@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>堆排序 - 可视化代码运行</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+    <style>
+        .node{
+            background-color: pink;
+            position: absolute;
+            text-align:center;
+        }
+
+        .num {
+            border: blue 1px solid;
+        }
+
+        .cur {
+            background-color: red;
+        }
+
+        .pre {
+            background-color: green;
+        }
+
+        .target{
+            background-color: yellow;
+        }
+
+        .guard{
+            margin-bottom: 10px;
+            background-color: gray;
+        }
+
+        .ordered {
+            border: 1px solid black !important;
+        }
+
+        .toorder {
+            border: 1px dotted black !important;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div style="position:relative;width:700px;height:500px;background-color:gray;">
+            <div class="node" v-for="(value, index) in nums" v-if="index>0"
+                v-bind:class="{'cur': index == curIndex, 'pre': index == preIndex, 'target': index == target, 'ordered': index >= round}"
+                :style="'left:'+getLeft(index)+'%;right:'+getRight(index)+'%;top:'+getTop(index)+'px;'
+                    +'width:'+value+'px;height:'+value+'px;border-radius:'+value+'px;line-height:'+value+'px'">
+                {{value}}
+            </div>
+            <!-- <div class="node" style="left:50%;right:50%;top:50px;">1</>
+
+            <div class="node" style="left:33.3%;right:66.6%;top:150px;">2</div>
+            <div class="node" style="left:66.6%;right:33.3%;top:150px;">3</div>
+
+            <div class="node" style="left:20%;right:80%;top:250px;">4</div>
+            <div class="node" style="left:40%;right:60%;top:250px;">5</div>
+            <div class="node" style="left:60%;right:40%;top:250px;">6</div>
+            <div class="node" style="left:80%;right:20%;top:250px;">7</div>
+
+            <div class="node" style="left:11.1%;right:88.8%;top:350px;">8</div>
+            <div class="node" style="left:22.2%;right:77.7%;top:350px;">9</div>
+            <div class="node" style="left:33.3%;right:66.6%;top:350px;">10</div>
+            <div class="node" style="left:44.4%;right:55.5%;top:350px;">11</div>
+            <div class="node" style="left:55.5%;right:44.4%;top:350px;">12</div>
+            <div class="node" style="left:66.6%;right:33.3%;top:350px;">13</div>
+            <div class="node" style="left:77.7%;right:22.2%;top:350px;">14</div>
+            <div class="node" style="left:88.8%;right:11.1%;top:350px;">15</div> -->
+        </div>
+        <div style="margin-top: 10px;margin-bottom:20px;">{{msg}}</div>
+        <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 20px;">
+                <select v-model="countNums">
+                    <option v-for="num in [2,3,4,5,6,7,8,9]" :selected="num == countNums">{{num}}</option>
+                </select>
+                <button @click="getNums">随机生成正数组（长度为{{countNums}}）</button>
+            </div>
+            <div>
+                <select v-model="delayOption" :disabled="intv != 0">
+                    <option v-for="num in [1,2,3]" :selected="num == delayOption">{{num}}</option>
+                </select>
+                <button @click="sort" :disabled="intv != 0">重新开始堆排序（每步耗时{{delayOption}}秒）</button>
+            </div>
+        </div>
+        <div>临时变量</div>
+        <div class="num" v-for="(value, index) in nums"
+            v-bind:class="{'guard': index == 0, 'cur': index == curIndex, 'pre': index == preIndex, 'target': index == target, 'ordered': index >= round}"
+            :style="'width:' + (value == 0 ? 5 : value * 10) +'px;'">
+            {{value}}
+        </div>
+    </div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            nums: [],//排序前后会改变
+            oldNums: [],//排序前
+            countNums: 5, //样例数组长度
+            delayOption: 1, //每步耗时秒数
+
+            msg: '等待开始按钮被点击中...',
+            round: 99,
+            curIndex: -1, //当前处理元素的索引
+            preIndex: -1, 
+            target: -1,
+            codeSteps: [], //每步的操作，记录运行步骤
+            intv: 0 // 定时器,返回值从1开始
+        },
+        created() {
+            this.genNums();
+        },
+        computed: {
+            delay() {
+                return this.delayOption * 1000;
+            }
+        },
+        methods: {
+            init() {
+                //初始化
+                this.nums = [];
+                this.round = 99;
+                this.curIndex = -1;
+                this.preIndex = -1;
+                this.target = -1;
+                this.codeSteps = [];
+                clearInterval(this.intv);
+                this.intv = 0;
+            },
+            getNums() {
+                this.init();
+                this.genNums();
+            },
+            genNums() {
+                this.nums.push(0); // 临时变量
+                for (let i = 0; i < this.countNums; i++) {
+                    this.nums.push(Math.ceil(Math.random() * 50));
+                }
+                this.oldNums = [...this.nums]; //深拷贝
+                this.round = countNums+1;
+            },
+            getLayer(i){
+                return parseInt(Math.log(i)/Math.log(2)) + 1; //从1开始
+            },
+            getLayerTotal(i){
+                return Math.pow(2, this.getLayer(i) - 1);
+            },
+            getLeft(i){
+                const total = this.getLayerTotal(i);
+                return 100 / ( total + 1) * (i-total+1);
+            },
+            getRight(i){
+                return 100 - this.getLeft(i);
+            },
+            getTop(i){
+                return 100 * this.getLayer(i) - 50;
+            },
+            sort() {
+                this.nums = [...this.oldNums];
+                //1. 使用队列暂存运行步骤
+                this.HeapSort();
+                console.log(this.codeSteps);
+                // 2. 按队列执行比较和交换，方便可视化
+                this.nums = [...this.oldNums]; //恢复数组重新可视化排序
+                // this.nums.push(-1);
+                // this.nums.pop();
+                this.funcIntv();
+                this.intv = setInterval(function () {
+                    app.funcIntv();
+                }, app.delay * 1.5); // 只需取出执行,但不能跟内部的1个单位一样，所以取1.5
+            },
+            HeapSort() {
+                this.codeSteps.push('app.msg="建立大根堆中..."');
+                const len = this.nums.length - 1;
+                this.BuildMaxHeap(len); //建立大根堆
+                this.codeSteps.push('app.msg="堆排序中..."');
+                for(let i = len;i > 1;i--){
+                    this.codeSteps.push('app.swap('+i+', 1);app.round='+i+';app.$forceUpdate();');
+                    this.swap(i, 1);
+                    this.HeapAdjust(1, i-1);
+                }
+                // this.nums.push(-1);
+                // this.nums.pop();
+            },
+            //将元素k为根的子树调整
+            HeapAdjust(k, len){
+                this.codeSteps.push('app.target='+k+';app.curIndex='+(2*k)+';app.preIndex='+(2*k+1)+';app.nums[0]=app.nums['+k+'];app.$forceUpdate();');
+                this.nums[0] = this.nums[k]; //0为辅助变量
+                for(let i = 2 * k; i <= len;i*=2){
+                    //选中2个子节点中小的那个
+                    if(i<len){
+                        if(this.nums[i] < this.nums[i+1]){
+                            i++;
+                        }
+                    }
+                    this.codeSteps.push('app.curIndex='+i+';app.preIndex=0;');
+                    if(this.nums[0] >= this.nums[i]){
+                        break;
+                    }else{
+                        this.codeSteps.push('app.curIndex='+k+';app.preIndex='+i+';app.nums['+k+']=app.nums['+i+'];app.nums['+i+']=app.nums[0];app.$forceUpdate();');
+                        this.nums[k] = this.nums[i];
+                        k = i;
+                        this.codeSteps.push('app.target='+k+';app.curIndex='+(2*k)+';app.preIndex='+(2*k+1));
+                    }
+                }
+                this.codeSteps.push('app.curIndex='+k+';app.preIndex=0;app.nums['+k+']=app.nums[0];app.$forceUpdate();');
+                this.nums[k] = this.nums[0];
+            },
+            //建立大根堆
+            BuildMaxHeap(len){
+                for(let i = parseInt(len/2); i>0;i--){
+                    this.HeapAdjust(i, len);
+                }
+            },
+            swap(i, j){
+                let tmp = app.nums[i];
+                app.nums[i] = app.nums[j];
+                app.nums[j] = tmp;
+            },
+            funcIntv() {
+                if (app.codeSteps.length > 0) {
+                    const code = app.codeSteps.shift();
+                    setTimeout(function () {
+                        eval(code);
+                    }, app.delay);
+                } else {
+                    console.log('结束');
+                    //可视化的样式收尾
+                    app.round = 1;
+                    app.curIndex = -1;
+                    app.preIndex = -1;
+                    app.target = -1;
+                    app.msg='堆排序已结束';
+                    clearInterval(app.intv);
+                    app.intv = 0;
+                    //检查
+                    let i = 1; // 临时变量不参与比较
+                    let nums = [...app.oldNums];
+                    nums.sort(app.sortNumber);
+                    while (i < app.nums.length && app.nums[i] == nums[i++]);
+                    if (i != app.nums.length) {
+                        alert('排序前后不一致! ' + nums + ' -> ' + app.nums);
+                        console.log(nums);
+                        console.log(app.nums);
+                    }
+                }
+            },
+            sortNumber(a, b) {
+                return a - b;
+            }
+        }
+    })
+</script>
+
+</html>
