@@ -18,3 +18,6 @@ Learning Vue.js and computer science
 
 ### [归并排序](https://hummingg.github.io/Vue/MergeSortVisualized.html)
 ### [基数排序](https://hummingg.github.io/Vue/RadixSortVisualized.html)
+
+## 算法经典问题可视化
+- [八(N)皇后](https://hummingg.github.io/Vue/Problems/QueensVisualized.html)
