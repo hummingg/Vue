@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>八皇后问题 - 可视化代码运行</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+    <style>
+        .block {
+            border: blue 1px solid;
+            width: 30px;
+            height: 30px;
+            display: inline-block;
+        }
+
+        .used{
+            background-color: pink;
+        }
+
+        .forbid{
+            background-color: gray;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 20px;">
+                <select v-model="countNums">
+                    <option v-for="num in [4,5,6,7,8,9]">{{num}}</option>
+                </select>
+                <button @click="getNums">{{countNums}}皇后</button>
+            </div>
+            <div>
+                <select v-model="delayOption" :disabled="intv != 0">
+                    <option v-for="num in [1,2,3]">{{num}}</option>
+                </select>
+                <button @click="solve" :disabled="intv != 0">重新开始运行（每步耗时约{{delayOption}}秒）</button>
+            </div>
+        </div>
+        <div style="margin-top:20px;">
+            <div v-for="(value, index) in nums" style="margin:0;padding:0;font-size:0;">
+                <div class="block" v-for="(v,i) in value"
+                    v-bind:class="{'used': v == 1, 'forbid': v != 1 && (marks[0][i] == 1 || marks[1][index+i] == 1 || marks[2][index-i+n-1] == 1 || marks[3][index] == 1)}"
+                    style="margin:0;padding:0;">
+                </div>
+            </div>
+        </div>
+        <div v-if="sum>0">共{{sum}}种结果</div>
+        <div v-for="(v1, i1) in results" style="margin-top:10px;">
+            <div>{{i1+1}}</div>
+            <div v-for="(v2, i2) in v1" style="margin:0;padding:0;font-size:0;">
+                <div class="block" v-for="(v3, i3) in v2" v-bind:class="{'used': v3 == 1}">
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            nums: [],//排序前后会改变
+            oldNums: [],//排序前
+            countNums: 4, //样例数组长度
+            delayOption: 1, //每步耗时秒数
+
+            results: [],
+            marks: [[],[],[],[]], //竖，撇，捺，横 三个方向
+            sum: 0,
+            flag: false, // 是否修改了皇后数量
+            codeSteps: [], //每步的操作，记录运行步骤
+            intv: 0 // 定时器,返回值从1开始
+        },
+        created() {
+            this.genNums();
+        },
+        computed: {
+            delay() {
+                return this.delayOption * 1000;
+            },
+            n(){
+                return this.nums.length;
+            }
+        },
+        methods: {
+            init() {
+                //初始化
+                this.nums = [];
+                this.results = [];
+                this.marks = [[],[],[],[]];
+                this.sum = 0;
+                this.codeSteps = [];
+                clearInterval(this.intv);
+                this.intv = 0;
+            },
+            getNums() {
+                this.flag = true;
+                this.init();
+                this.genNums();
+            },
+            genNums() {
+                for(let i = 0; i < this.countNums; i++){
+                    let nums = [];
+                    for(let j = 0; j < this.countNums; j++){
+                        nums.push(0);
+                    }
+                    this.nums.push(nums);
+                }
+                // this.oldNums = [...this.nums]; //深拷贝 二重！
+                this.oldNums = this.deepCopy(this.nums);
+                this.getMarks();
+            },
+            getMarks(){
+                const n = this.nums.length;
+                for(let i = 0; i < n; i++){ // 横，可视化用
+                    this.marks[3][i] = 0;
+                }
+                for(let i = 0; i < n; i++){ // 竖 col
+                    this.marks[0][i] = 0;
+                }
+                for(let i = 0; i <= 2*n-2; i++){ // 撇 row+col 共2n-1个，从0开始
+                    this.marks[1][i] = 0;
+                }
+                for(let i = 0; i <= 2*n -2; i++ ){ // 捺 row-col 0-(n-1)要加n-1补到0 共2n-1个，从0开始
+                    this.marks[2][i] = 0;
+                }
+            },
+            deepCopy(biArr){
+                let ret = [];
+                for(let i=0;i<biArr.length;i++){
+                    ret.push([...biArr[i]]);
+                }
+                return ret;
+            },
+            solve() {
+                // this.nums = [...this.oldNums];
+                this.nums = this.deepCopy(this.oldNums);
+                this.sum = 0;
+                //1. 使用队列暂存运行步骤
+                this.PlaceQueen(0);
+                console.log(this.codeSteps);
+                // 2. 按队列执行比较和交换，方便可视化
+                // this.nums = [...this.oldNums]; //恢复数组重新可视化排序
+                this.nums = this.deepCopy(this.oldNums);
+                this.results = [];
+                // this.nums.push(-1);
+                // this.nums.pop();
+                this.$forceUpdate();
+                this.funcIntv();
+                this.intv = setInterval(function () {
+                    app.funcIntv();
+                }, app.delay * 1.5); // 只需取出执行,但不能跟内部的1个单位一样，所以取1.5
+            },
+            PlaceQueen(curRow){ //curRow：当前行
+                if(curRow == this.n){
+                    this.codeSteps.push('app.results.push(app.deepCopy(app.nums));');
+                    this.results.push(this.deepCopy(this.nums));
+                    this.sum++;
+                    return;
+                }
+                let i = curRow;
+                for(let j = 0; j < this.n;j++){ // j是列
+                    if(this.marks[0][j] == 0 && this.marks[1][i+j] == 0 && this.marks[2][i-j+this.n-1] == 0){
+                        this.codeSteps.push('app.nums['+i+']['+j+'] = 1;app.marks[0]['+j+'] = 1;app.marks[1]['+(i+j)+'] = 1;app.marks[2]['+(i-j+app.n-1)+'] = 1;app.marks[3]['+i+'] = 1;app.$forceUpdate();');
+                        this.nums[i][j] = 1;
+                        this.marks[0][j] = 1; // 竖
+                        this.marks[1][i+j] = 1; // 撇
+                        this.marks[2][i-j+this.n-1] = 1; // 捺
+                        this.marks[3][i] = 1;
+                        this.PlaceQueen(curRow+1); // 递归
+                        this.codeSteps.push('app.nums['+i+']['+j+'] = 0;app.marks[0]['+j+'] = 0;app.marks[1]['+(i+j)+'] = 0;app.marks[2]['+(i-j+app.n-1)+'] = 0;app.marks[3]['+i+'] = 0;app.$forceUpdate();');
+                        this.marks[0][j] = 0; // 回溯
+                        this.marks[1][i+j] = 0;
+                        this.marks[2][i-j+this.n-1] = 0;
+                        this.marks[3][i] = 0;
+                        this.nums[i][j] = 0;
+                    }
+                }
+            },
+            funcIntv() {
+                if (app.codeSteps.length > 0) {
+                    const code = app.codeSteps.shift();
+                    setTimeout(function () {
+                        eval(code);
+                    }, app.delay);
+                } else {
+                    console.log('结束');
+                    clearInterval(app.intv);
+                    app.intv = 0;
+                }
+            },
+            sortNumber(a, b) {
+                return a - b;
+            }
+        }
+    })
+</script>
+
+</html>
