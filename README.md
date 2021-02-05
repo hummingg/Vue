@@ -30,8 +30,11 @@ Learning Vue.js and computer science
 2.[堆排序](https://hummingg.github.io/Vue/HeapSortVisualized.html)
   - 堆是完全二叉树，并同时满足堆的性质：即子结点的键值总是小于（或者大于）它的父节点。
   - 堆中定义以下几种操作：
+  
     1.创建大根堆：将堆中的所有数据重新排序。
+    
     2.大根堆调整：堆的根节点的数据逐层向下移动，直到使所有子节点都小于其父节点。
+    
     3.堆排序：替换根节点的数据，并做大根堆调整的递归运算。
 
 ### [归并排序](https://hummingg.github.io/Vue/MergeSortVisualized.html)
