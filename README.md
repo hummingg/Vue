@@ -1,5 +1,5 @@
 # Vue & cs
-Learning Vue.js and computer science
+Learning Vue.js and computer science!
 
 ## 内部排序算法可视化
 
