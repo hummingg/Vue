@@ -14,11 +14,11 @@
             display: inline-block;
         }
 
-        .used{
+        .used {
             background-color: pink;
         }
 
-        .forbid{
+        .forbid {
             background-color: gray;
         }
     </style>
@@ -38,6 +38,24 @@
                     <option v-for="num in [1,2,3]">{{num}}</option>
                 </select>
                 <button @click="solve" :disabled="intv != 0">重新开始运行（每步耗时约{{delayOption}}秒）</button>
+            </div>
+        </div>
+        <div style="margin-top:20px;">
+            <div style="display: inline-block;margin-right:20px;">
+                撇方向(行号+列号的相同在同一个方向)
+                <div v-for="(value, index) in nums" style="margin:0;padding:0;">
+                    <div class="block" v-for="(v,i) in value" :style="'margin:0;padding:0;background-color:'+colors[index+i]+';'">
+                        {{index + i}}
+                    </div>
+                </div>
+            </div>
+            <div style="display: inline-block;">
+                捺方向(行号-列号相同的在同一个方向)
+                <div v-for="(value, index) in nums" style="margin:0;padding:0;">
+                    <div class="block" v-for="(v,i) in value" :style="'margin:0;padding:0;'+(index-i+n-1 < 7 ? 'background-color:'+colors[index-i+n-1]+';' : '')">
+                        {{index - i}}
+                    </div>
+                </div>
             </div>
         </div>
         <div style="margin-top:20px;">
@@ -67,10 +85,10 @@
             countNums: 4, //样例数组长度
             delayOption: 1, //每步耗时秒数
 
+            colors: ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple'],
             results: [],
-            marks: [[],[],[],[]], //竖，撇，捺，横 三个方向
+            marks: [[], [], [], []], //竖，撇，捺，横 四个方向
             sum: 0,
-            flag: false, // 是否修改了皇后数量
             codeSteps: [], //每步的操作，记录运行步骤
             intv: 0 // 定时器,返回值从1开始
         },
@@ -81,7 +99,7 @@
             delay() {
                 return this.delayOption * 1000;
             },
-            n(){
+            n() {
                 return this.nums.length;
             }
         },
@@ -90,21 +108,20 @@
                 //初始化
                 this.nums = [];
                 this.results = [];
-                this.marks = [[],[],[],[]];
+                this.marks = [[], [], [], []];
                 this.sum = 0;
                 this.codeSteps = [];
                 clearInterval(this.intv);
                 this.intv = 0;
             },
             getNums() {
-                this.flag = true;
                 this.init();
                 this.genNums();
             },
             genNums() {
-                for(let i = 0; i < this.countNums; i++){
+                for (let i = 0; i < this.countNums; i++) {
                     let nums = [];
-                    for(let j = 0; j < this.countNums; j++){
+                    for (let j = 0; j < this.countNums; j++) {
                         nums.push(0);
                     }
                     this.nums.push(nums);
@@ -113,24 +130,24 @@
                 this.oldNums = this.deepCopy(this.nums);
                 this.getMarks();
             },
-            getMarks(){
+            getMarks() {
                 const n = this.nums.length;
-                for(let i = 0; i < n; i++){ // 横，可视化用
+                for (let i = 0; i < n; i++) { // 横，可视化用
                     this.marks[3][i] = 0;
                 }
-                for(let i = 0; i < n; i++){ // 竖 col
+                for (let i = 0; i < n; i++) { // 竖 col
                     this.marks[0][i] = 0;
                 }
-                for(let i = 0; i <= 2*n-2; i++){ // 撇 row+col 共2n-1个，从0开始
+                for (let i = 0; i <= 2 * n - 2; i++) { // 撇 row+col 共2n-1个，从0开始
                     this.marks[1][i] = 0;
                 }
-                for(let i = 0; i <= 2*n -2; i++ ){ // 捺 row-col 0-(n-1)要加n-1补到0 共2n-1个，从0开始
+                for (let i = 0; i <= 2 * n - 2; i++) { // 捺 row-col 0-(n-1)要加n-1补到0 共2n-1个，从0开始
                     this.marks[2][i] = 0;
                 }
             },
-            deepCopy(biArr){
+            deepCopy(biArr) {
                 let ret = [];
-                for(let i=0;i<biArr.length;i++){
+                for (let i = 0; i < biArr.length; i++) {
                     ret.push([...biArr[i]]);
                 }
                 return ret;
@@ -154,27 +171,27 @@
                     app.funcIntv();
                 }, app.delay * 1.5); // 只需取出执行,但不能跟内部的1个单位一样，所以取1.5
             },
-            PlaceQueen(curRow){ //curRow：当前行
-                if(curRow == this.n){
+            PlaceQueen(curRow) { //curRow：当前行
+                if (curRow == this.n) {
                     this.codeSteps.push('app.results.push(app.deepCopy(app.nums));');
                     this.results.push(this.deepCopy(this.nums));
                     this.sum++;
                     return;
                 }
                 let i = curRow;
-                for(let j = 0; j < this.n;j++){ // j是列
-                    if(this.marks[0][j] == 0 && this.marks[1][i+j] == 0 && this.marks[2][i-j+this.n-1] == 0){
-                        this.codeSteps.push('app.nums['+i+']['+j+'] = 1;app.marks[0]['+j+'] = 1;app.marks[1]['+(i+j)+'] = 1;app.marks[2]['+(i-j+app.n-1)+'] = 1;app.marks[3]['+i+'] = 1;app.$forceUpdate();');
+                for (let j = 0; j < this.n; j++) { // j是列
+                    if (this.marks[0][j] == 0 && this.marks[1][i + j] == 0 && this.marks[2][i - j + this.n - 1] == 0) {
+                        this.codeSteps.push('app.nums[' + i + '][' + j + '] = 1;app.marks[0][' + j + '] = 1;app.marks[1][' + (i + j) + '] = 1;app.marks[2][' + (i - j + app.n - 1) + '] = 1;app.marks[3][' + i + '] = 1;app.$forceUpdate();');
                         this.nums[i][j] = 1;
                         this.marks[0][j] = 1; // 竖
-                        this.marks[1][i+j] = 1; // 撇
-                        this.marks[2][i-j+this.n-1] = 1; // 捺
+                        this.marks[1][i + j] = 1; // 撇
+                        this.marks[2][i - j + this.n - 1] = 1; // 捺
                         this.marks[3][i] = 1;
-                        this.PlaceQueen(curRow+1); // 递归
-                        this.codeSteps.push('app.nums['+i+']['+j+'] = 0;app.marks[0]['+j+'] = 0;app.marks[1]['+(i+j)+'] = 0;app.marks[2]['+(i-j+app.n-1)+'] = 0;app.marks[3]['+i+'] = 0;app.$forceUpdate();');
+                        this.PlaceQueen(curRow + 1); // 递归
+                        this.codeSteps.push('app.nums[' + i + '][' + j + '] = 0;app.marks[0][' + j + '] = 0;app.marks[1][' + (i + j) + '] = 0;app.marks[2][' + (i - j + app.n - 1) + '] = 0;app.marks[3][' + i + '] = 0;app.$forceUpdate();');
                         this.marks[0][j] = 0; // 回溯
-                        this.marks[1][i+j] = 0;
-                        this.marks[2][i-j+this.n-1] = 0;
+                        this.marks[1][i + j] = 0;
+                        this.marks[2][i - j + this.n - 1] = 0;
                         this.marks[3][i] = 0;
                         this.nums[i][j] = 0;
                     }
