@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隐马尔可夫模型(HMM, Hidden Markov Model)</title>
+    <script src="https://cdn.staticfile.org/vue/2.2.2/vue.min.js"></script>
+    <style>
+        *{
+            margin: 0;
+        }
+        div.node{
+            margin: 0 200px 50px 0;
+            display: inline-block;
+            vertical-align:top;
+        }
+        .state{
+            background-color: green;
+            width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        #data > div{
+            margin: 0 30px;
+            display: inline-block;
+        }
+        .highlight{
+            background-color: yellow
+        }
+    </style>
+</head>
+<div id="app">
+    <h1>李航《统计学习方法》第二版 P200：例10.2、10.3</h1>
+    <h2>前向算法：α[t][i] = P(O<sub>1</sub>O<sub>2</sub>...O<sub>t</sub>, q<sub>t</sub>=s<sub>i</sub>|μ)</h2>
+    <h2>后向算法：β[t][i] = P(O<sub>t+1</sub>O<sub>t+2</sub>...O<sub>T</sub>|q<sub>t</sub>=s<sub>i</sub>, μ)</h2>
+    <h2>维特比算法：<br/>&nbsp;&nbsp;&nbsp;&nbsp;
+        δ[t][i]: 使时刻 t 时状态为 i 的所有单个路径中概率的最大值<br/>&nbsp;&nbsp;&nbsp;&nbsp;
+        Ψ[t][i]: 使时刻 t 时状态为 i 的所有单个路径中概率最大的路径中时刻 t-1 的状态</h2>
+    <div id="data" style="margin-top: 20px;">
+        <div>
+            <h3>A（状态转移概率矩阵）</h3>
+            <div v-for="v1 in A">
+                {{v1}}
+            </div>
+        </div>
+        <div>
+            <h3>B（发射矩阵：符号发射概率矩阵）</h3>
+            <div v-for="v1 in B">
+                {{v1}}
+            </div>
+        </div>
+        <div>
+            <h3>P（初始状态概率矩阵）</h3>
+            <div v-for="v1 in P">
+                {{v1}}
+            </div>
+        </div>
+        <div>
+            <h3>R（观测序列：球的颜色序列）</h3>
+            <div v-for="v1 in R">
+                {{v1}}(即{{R_zh[v1]}}球)
+            </div>
+        </div>
+    </div>
+    <div style="margin-top: 50px;">
+        <!-- 横向排版  -->
+        <div v-for="i in Index"><!-- 状态 -->
+            <div v-for="j in Index" class="node"><!-- 时刻 -->
+                <div class="state">{{i}}</div>
+                <div v-if="j==0">
+                    {{P[i]}}
+                    <div>{{psblt_b[i].toFixed(5)}}（前向算法）</div>
+                </div>
+                <div v-if="j==1">
+                    <div v-for="v in get_psblt_m(i)[0]">{{v}}</div>
+                    <div>上述求和：{{ get_psblt_m(i)[1] }}（前向算法）</div>
+                </div>
+                <div v-if="j==2">
+                    <div v-for="v in get_psblt(i)[0]" v-bind:class='{highlight: v == "【" + max_p_index[0] + ", " + max_p_index[1] + "】" + ", " + max_p.toFixed(5) }'>{{v}}</div>
+                    <div>上述求和：{{ get_psblt(i)[1] }}（前向算法）</div>
+                </div>
+                <div style='background-color: cyan'>{{ β[j][i].toFixed(5) }}（后向算法）</div>
+                <div style='background-color: orange'>最大概率：{{ δ[j][i].toFixed(5) }}（维特比算法）</div>
+                <div style='background-color: orange'>最大概率时上个状态： {{ Ψ[j][i] }}（维特比算法）</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<body>
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: {
+                msg: "hello",
+                
+                A: [
+                    [0.5, 0.2, 0.3],
+                    [0.3, 0.5, 0.2],
+                    [0.2, 0.3, 0.5]
+                ],
+                B: [
+                    [0.5, 0.5],
+                    [0.4, 0.6],
+                    [0.7, 0.3]
+                ],
+                P: [0.2, 0.4, 0.4],
+                R: [0, 1, 0],
+                R_zh: ['红', '白'],
+                Index: [0, 1, 2],
+
+                //类似前向算法
+                psblt: [],
+                max_p_index: [],
+                max_p: 0,
+                psblt_m: [], // 中间概率
+                psblt_b: [], // 首个观测值概率
+
+                //后向算法
+                β: [], // β[t][i]
+
+                //Viterbi算法
+                δ: [],  // δ[t][i]: 在时刻t状态为i的所有单个路径中概率的最大值
+                Ψ: []   // Ψ[t][i]: 在时刻t状态为i的所有单个路径中概率最大的路径的第t-1个状态
+            },
+            computed:{
+
+            },
+            created(){
+                for (let i = 0; i < 3; i++) {
+                    this.psblt.push([]);
+                    for (let j = 0; j < 3; j++) {
+                        this.psblt[i].push([]);
+                        for (let k = 0; k < 3; k++) {
+                            this.psblt[i][j].push(0);
+                        }
+                    }
+                }
+                
+                for (let i = 0; i < 3; i++) {
+                    this.psblt_m.push([]);
+                    for (let j = 0; j < 3; j++) {
+                        this.psblt_m[i].push(0);
+                    }
+                }
+                
+                for (let i = 0; i < 3; i++) {
+                    this.psblt_b.push(0);
+                }
+                
+                // β[t][i]：t时刻，i状态
+                for (let t = 0; t < 3; t++) {   // 各时刻
+                    this.β.push([]);
+                    for (let i = 0; i < 3; i++) {   // 各状态
+                        this.β[t].push(t == 2 ? 1 : 0);
+                    }
+                }
+                
+                // 维特比算法
+                for (let t = 0; t < 3; t++) {   // 各时刻
+                    this.δ.push([]);
+                    this.Ψ.push([]);
+                    for (let i = 0; i < 3; i++) {   // 各状态
+                        this.δ[t].push(0);
+                        this.Ψ[t].push(0);
+                    }
+                }
+
+
+            },
+            methods:{
+                //获得[x:x:col]
+                get_psblt(col){
+                    let arr = [];
+                    let sum = 0;
+                    for (let i = 0; i < 3; i++) {
+                        for (let j = 0; j < 3; j++) {
+                            arr.push('【' + i + ", " + j + "】, " + this.psblt[i][j][col].toFixed(5));
+                            sum += this.psblt[i][j][col];
+                        }
+                    }
+                    return [arr, sum.toFixed(5)];
+                },
+                //获得[x:col]
+                get_psblt_m(col){
+                    let arr = [];
+                    let sum = 0;
+                    for (let i = 0; i < 3; i++) {
+                        arr.push('【' + i + '】' + ", " + this.psblt_m[i][col].toFixed(5));
+                        sum += this.psblt_m[i][col];
+                    }
+                    return [arr, sum.toFixed(5)];
+                },
+                // 不使用前向算法，指数爆炸求各路径概率
+                caculate(){
+                    let max_p = 0;
+                    let max_index = [];
+                    for (let i = 0; i < 3; i++) {
+                        this.psblt_b[i] = this.P[i] * this.B[i][this.R[0]];
+                        for (let j = 0; j < 3; j++) {
+                            this.psblt_m[i][j] = this.psblt_b[i] * this.A[i][j] * this.B[j][this.R[1]];
+                            for (let k = 0; k < 3; k++) {
+                                this.psblt[i][j][k] = this.psblt_m[i][j] * this.A[j][k] * this.B[k][this.R[2]];
+                                if (this.psblt[i][j][k] > max_p) {
+                                    max_p = this.psblt[i][j][k];
+                                    max_index = [i, j, k];
+                                }
+                            }
+                        }
+                    }
+                    this.max_p = max_p;
+                    this.max_p_index = max_index;
+                    console.warn('各路径概率');
+                    console.log(this.psblt);
+                    console.warn('最可能状态序列');
+                    console.log(max_p);
+                    console.log(max_index);
+                },
+                // 不使用前向算法，指数爆炸求概率和
+                brute(){
+                    let sum = 0;
+                    for (let i = 0; i < 3; i++) {
+                        for (let j = 0; j < 3; j++) {
+                            for (let k = 0; k < 3; k++) {
+                                sum += this.psblt[i][j][k];
+                            }
+                        }
+                    }
+                    return sum;
+                },
+
+                //后向算法
+                backforward(){
+                    for(let i = 1; i >= 0; i--){    // 时刻t=i
+                        for(let j = 0; j < 3; j++){  // 时刻t的状态=j
+                            for(let k = 0; k < 3; k++){ // 时刻t+1(=i+1)的状态=k
+                                this.β[i][j] += this.A[j][k] * this.B[k][this.R[i+1]] * this.β[i+1][k];
+                            }
+                        }
+                    }
+                    let sum = 0;
+                    for(let i = 0; i < 3; i++){
+                        sum += this.β[0][i] * this.P[i] * this.B[i][this.R[0]];
+                    }
+                    console.log(sum);
+                },
+
+                //前向、后向结合
+                combine(){
+                    let p = 0;
+
+                    // t=2 相当于前向算法
+                    for(let j = 0; j < 3; j++){ // 状态
+                        p += this.β[2][j] * this.get_psblt(j)[1];
+                    }
+                    console.log('t=2', p);
+
+                    // t=1 不前不后，反而提高时间空间复杂度？
+                    p = 0;
+                    for(let j = 0; j < 3; j++){ // 状态
+                        p += this.β[1][j] * this.get_psblt_m(j)[1];
+                    }
+                    console.log('t=1', p);
+
+                    // t=0 相当于后向算法
+                    p = 0;
+                    for(let j = 0; j < 3; j++){ // 状态
+                        p += this.β[0][j] * this.psblt_b[j];
+                    }
+                    console.log('t=0', p);
+                    
+                },
+
+                // 维特比算法
+                viterbi(){
+                    let δ = this.δ;
+                    let Ψ = this.Ψ;
+                    for(let i = 0; i < 3; i++){ // 初始化时刻0
+                        δ[0][i] = this.P[i] * this.B[i][this.R[0]];
+                    }
+                    for(let t = 1; t < 3; t++){ // 各时刻
+                        for(let i = 0; i < 3; i++){ // 时刻t的状态
+                            let max_p = 0;
+                            let max_index = 0;
+                            for(let j = 0; j < 3; j++){  // 时刻t-1的状态
+                                let p = δ[t-1][j] * this.A[j][i] * this.B[i][this.R[t]];
+                                if(p > max_p){
+                                    max_p = p;
+                                    max_index = j;
+                                }
+                            }
+                            δ[t][i] = max_p;
+                            Ψ[t][i] = max_index;
+                        }
+                    }
+                    console.log(δ);
+                    console.log(Ψ);
+                    this.δ = δ;
+                    this.Ψ = Ψ;
+                },
+
+                // 工具函数
+                // sum(arr){
+                //     var s = 0;
+                //     arr.forEach(function(val, idx, arr) {
+                //         s += val;
+                //     }, 0);
+                //     return s;
+                // }
+            }
+        });
+
+        console.warn('类似前向算法的暴力法');
+        app.caculate();
+        console.log('P(O|λ)', app.brute());
+        console.warn('后向算法结果同上');
+        app.backforward();
+        console.warn('前后向结合，不同t时结果也一样');
+        app.combine();
+        console.warn('维特比算法')
+        app.viterbi();
+        app.$forceUpdate();
+
+        console.warn("Vue 结束");
+    </script>
+</body>
+
+</html>
