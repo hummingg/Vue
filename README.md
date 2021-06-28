@@ -50,3 +50,7 @@ Learning Vue.js and computer science!
 ## 算法经典问题可视化
 1.[八(N)皇后](https://hummingg.github.io/Vue/Problems/QueensVisualized.html)
   - 递归和回溯
+2.[隐马尔可夫模型](https://hummingg.github.io/Vue/Model/hmm.html)
+  - 前向算法
+  - 后向算法
+  - 维特比算法
