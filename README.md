@@ -41,6 +41,7 @@ Learning Vue.js and computer science!
   - 将已有序的子序列合并，得到完全有序的序列。
   - 初始时每个数据都是一个有序子序列。
   - 示例为二路归并，即每次都将两个有序表合并成一个有序表。
+  
 ### [基数排序](https://hummingg.github.io/Vue/RadixSortVisualized.html)
   - 将要排序的元素分配至某些“桶”中。
   - 将所有待比较数值（正整数）统一为同样的数位长度，数位较短的数前面补零。
