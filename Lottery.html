@@ -168,13 +168,13 @@
                 // switch语句判断抽奖结果，这部分比较简单，就不赘述了。
                 switch (tdList[tdId]) {
                     case 0:
-                        clearInterval(startTime);
-                        startTime = null;
+//                         clearInterval(startTime);
+//                         startTime = null;
                         break;
                     default:
                         // move();
-                        // clearInterval(startTime);
-                        // startTime = null;
+                        clearInterval(startTime);
+                        startTime = null;
                         break;
                 //         results.innerText = '今天吃转转乐';
                 //         results.style.display = 'block';
